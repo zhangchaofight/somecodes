@@ -35,11 +35,11 @@ fun timeoutModel(task: () -> Unit, success: () -> Unit, timeout: () -> Unit, err
 }
 ```
 备注：
-1.这个方法仅作为简单的实现思路，可以完成简单的需求。如果执行的方法有返回值，需要改变Observable的返回值。
-2.这个方法执行的线程没有做转换，可能会产生县城切换之类的问题，建议根据具体使用的场景做线程切换操作。
-3.由于这个方法使用的场景一般执行时间较长，如果是在context里，建议将返回的Disposable对象添加到CompositeDisposable里，绑定context生命周期，在context生命周期结束的时候dispose一下，防止发生异常
++ 这个方法仅作为简单的实现思路，可以完成简单的需求。如果执行的方法有返回值，需要改变Observable的返回值。
++ 这个方法执行的线程没有做转换，可能会产生县城切换之类的问题，建议根据具体使用的场景做线程切换操作。
++ 由于这个方法使用的场景一般执行时间较长，如果是在context里，建议将返回的Disposable对象添加到CompositeDisposable里，绑定context生命周期，在context生命周期结束的时候dispose一下，防止发生异常
 
 
 思考：
-1.可以将这个task方法返回值改成泛型参数
-2.没有测试线程切换问题
++ 可以将这个task方法返回值改成泛型参数
++ 没有测试线程切换问题
