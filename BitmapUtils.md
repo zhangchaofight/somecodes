@@ -12,16 +12,18 @@ fun Bitmap.centerCrop(): Bitmap {
     }
     return when {
         width > height -> {
-            if (this.isRecycled) {
+            val result = Bitmap.createBitmap(this, (width - height) / 2, 0, height, height)
+            if (!this.isRecycled) {
                 this.recycle()
             }
-            Bitmap.createBitmap(this, (width - height) / 2, 0, height, height)
+            result
         }
         width < height -> {
-            if (this.isRecycled) {
+            val result = Bitmap.createBitmap(this, 0, (height - width) / 2, width, width)
+            if (!this.isRecycled) {
                 this.recycle()
             }
-            Bitmap.createBitmap(this, 0, (height - width), width, width)
+            result
         }
         else -> this
     }
