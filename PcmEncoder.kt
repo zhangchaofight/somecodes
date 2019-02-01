@@ -1,4 +1,3 @@
-```
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.media.MediaCodec;
@@ -166,4 +165,3 @@ public class PcmEncoder {
     }
 
 }
-```
