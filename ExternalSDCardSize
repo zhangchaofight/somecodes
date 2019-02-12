@@ -1,0 +1,18 @@
+//检查SD卡是否有足够的空间
+public static boolean checkFreeSpace() {
+    int minimum = 5; //要求sd卡最少可用空间已M为单位
+    long size = minimum * 1024 * 1024;
+    if (getSDFreeSpace() > size) {
+        return true;
+    } else {
+        return false;
+    }
+}
+public static long getSDFreeSpace() {
+    StatFs stat = new StatFs(Environment.getExternalStorageDirectory().getAbsolutePath());
+    long blockSize = stat.getBlockSizeLong();
+    long availableBlocks = stat.getAvailableBlocksLong();
+    return availableBlocks * blockSize;
+}
+
+//1.大小可配  2.路径可配
