@@ -1,0 +1,36 @@
+//prepare code
+text_switcher.setFactory (object : ViewSwitcher.ViewFactory {
+    override fun makeView(): View {
+        val v = TextView(context)
+        v.setSingleLine()
+        v.maxLines = 1
+        v.setLines(1)
+        v.ellipsize = TextUtils.TruncateAt.END
+        val lp = FrameLayout.LayoutParams(MATCH_PARENT, dip(40))
+        v.layoutParams = lp
+        v.gravity = Gravity.CENTER
+        v.setTextColor(Color.BLACK)
+        v.textSize = 15f
+        return v
+    }
+})
+text_switcher.inAnimation = AnimationUtils.loadAnimation(context, R.anim.slide_in_bottom)
+text_switcher.outAnimation = AnimationUtils.loadAnimation(context, R.anim.slide_out_top)
+
+//slide_in_bottom.xml
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <translate
+        android:duration="1000"
+        android:fromYDelta="100%p"
+        android:toYDelta="0" />
+</set>
+
+//slide_out_top.xml
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <translate
+        android:duration="1000"
+        android:fromYDelta="0"
+        android:toYDelta="-100%p" />
+</set>
