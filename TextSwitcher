@@ -17,6 +17,19 @@ text_switcher.setFactory (object : ViewSwitcher.ViewFactory {
 text_switcher.inAnimation = AnimationUtils.loadAnimation(context, R.anim.slide_in_bottom)
 text_switcher.outAnimation = AnimationUtils.loadAnimation(context, R.anim.slide_out_top)
 
+//continuous rolling
+private fun getDisposable(time: Long?): Disposable {
+    return Observable.interval(time ?:timeArray[index].toLong(), 1, TimeUnit.SECONDS)
+            .take(1)
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe {
+                text_switcher.setText(array[index])
+                disposable.add(getDisposable(timeArray[index].toLong()))
+                index = (index + 1) % array.size
+            }
+}
+
 //slide_in_bottom.xml
 <?xml version="1.0" encoding="utf-8"?>
 <set xmlns:android="http://schemas.android.com/apk/res/android">
