@@ -37,6 +37,9 @@ fun Bitmap.centerCrop(): Bitmap {
 fun Bitmap.scaleBitmap(newWidth: Int, newHeight: Int): Bitmap {
     val height = this.height
     val width = this.width
+    if (newWidth == width && newHeight == height) {
+        return this
+    }
     val scaleWidth = newWidth.toFloat() / width
     val scaleHeight = newHeight.toFloat() / height
     val matrix = Matrix()
