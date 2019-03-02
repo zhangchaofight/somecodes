@@ -1,0 +1,341 @@
+import android.graphics.*
+import android.os.Build
+
+@Suppress("OverridingDeprecatedMember", "DEPRECATION")
+class CustomCanvas(var canvas: Canvas, width: Int = -1, var paint: Paint? = null) : Canvas() {
+
+    private val rect = Rect()
+    private val charArray = charArrayOf('【')
+
+    private fun calculateDelta(chars: CharArray, index: Int = 0): Int {
+        return internalCalculateDelta(chars.getOrNull(index))
+    }
+
+    private fun calculateDelta(string: String, index: Int = 0): Int {
+        return internalCalculateDelta(string.getOrNull(index))
+    }
+
+    private fun calculateDelta(chars: CharSequence, index: Int = 0): Int {
+        return internalCalculateDelta(chars.getOrNull(index))
+    }
+
+    private fun internalCalculateDelta(char: Char?): Int {
+        if (char == null) {
+            return 0
+        }
+        if (!specialSet.contains(char)) {
+            return 0
+        }
+        charArray[0] = char
+        paint?.apply {
+            this.getTextBounds(charArray, 0, 1, rect)
+            return rect.left
+        }
+        return 0
+    }
+
+    /********************************************************************************************/
+
+    override fun drawText(text: CharArray, index: Int, count: Int, x: Float, y: Float,
+                          paint: Paint) {
+        val delta = calculateDelta(text)
+        canvas.drawText(text, index, count, x - delta, y, paint)
+    }
+
+    override fun drawText(text: CharSequence, start: Int, end: Int, x: Float, y: Float,
+                          paint: Paint) {
+        val delta = calculateDelta(text, start)
+        canvas.drawText(text, start, end, x - delta, y, paint)
+    }
+
+    override fun drawText(text: String, x: Float, y: Float, paint: Paint) {
+        paint.textSize
+        val delta = calculateDelta(text)
+        canvas.drawText(text, x - delta, y, paint)
+    }
+
+    override fun drawText(text: String, start: Int, end: Int, x: Float, y: Float,
+                          paint: Paint) {
+        val delta = calculateDelta(text, start)
+        canvas.drawText(text, start, end, x - delta, y, paint)
+    }
+
+    /********************************************************************************************/
+
+    override fun getWidth(): Int {
+        return canvas.width
+    }
+
+    override fun getHeight(): Int {
+        return canvas.height
+    }
+
+    override fun drawArc(left: Float, top: Float, right: Float, bottom: Float, startAngle: Float,
+                         sweepAngle: Float, useCenter: Boolean, paint: Paint) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            canvas.drawArc(left, top, right, bottom, startAngle, sweepAngle, useCenter, paint)
+        }
+    }
+
+    override fun drawArc(oval: RectF, startAngle: Float, sweepAngle: Float,
+                         useCenter: Boolean, paint: Paint) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            canvas.drawArc(oval.left, oval.top, oval.right, oval.bottom, startAngle, sweepAngle, useCenter,
+                    paint)
+        }
+    }
+
+    override fun drawARGB(a: Int, r: Int, g: Int, b: Int) {
+        canvas.drawColor(Color.argb(a, r, g, b))
+    }
+
+    override fun drawBitmap(bitmap: Bitmap, left: Float, top: Float,
+                            paint: Paint?) {
+        canvas.drawBitmap(bitmap, left, top, paint)
+    }
+
+    override fun drawBitmap(bitmap: Bitmap, matrix: Matrix,
+                            paint: Paint?) {
+        canvas.drawBitmap(bitmap, matrix, paint)
+    }
+
+    override fun drawBitmap(bitmap: Bitmap, src: Rect?, dst: Rect,
+                            paint: Paint?) {
+        canvas.drawBitmap(bitmap, src, dst, paint)
+    }
+
+    override fun drawBitmap(bitmap: Bitmap, src: Rect?, dst: RectF,
+                            paint: Paint?) {
+        canvas.drawBitmap(bitmap, src, dst, paint)
+    }
+
+    override fun drawBitmap(colors: IntArray, offset: Int, stride: Int, x: Float, y: Float,
+                            width: Int, height: Int, hasAlpha: Boolean, paint: Paint?) {
+        canvas.drawBitmap(colors, offset, stride, x, y, width, height, hasAlpha, paint)
+    }
+
+    override fun drawBitmap(colors: IntArray, offset: Int, stride: Int, x: Int, y: Int,
+                            width: Int, height: Int, hasAlpha: Boolean, paint: Paint?) {
+        canvas.drawBitmap(colors, offset, stride, x.toFloat(), y.toFloat(), width, height,
+                hasAlpha, paint)
+    }
+
+    override fun drawBitmapMesh(bitmap: Bitmap, meshWidth: Int, meshHeight: Int,
+                                verts: FloatArray, vertOffset: Int, colors: IntArray?, colorOffset: Int,
+                                paint: Paint?) {
+        canvas.drawBitmapMesh(bitmap, meshWidth, meshHeight, verts, vertOffset, colors, colorOffset, paint)
+    }
+
+    override fun drawCircle(cx: Float, cy: Float, radius: Float, paint: Paint) {
+        canvas.drawCircle(cx, cy, radius, paint)
+    }
+
+    override fun drawColor(color: Int) {
+        canvas.drawColor(color)
+    }
+
+    override fun drawColor(color: Int, mode: PorterDuff.Mode) {
+        canvas.drawColor(color, mode)
+    }
+
+    override fun drawLine(startX: Float, startY: Float, stopX: Float, stopY: Float,
+                          paint: Paint) {
+        canvas.drawLine(startX, startY, stopX, stopY, paint)
+    }
+
+    override fun drawLines(pts: FloatArray, offset: Int, count: Int,
+                           paint: Paint) {
+        canvas.drawLines(pts, offset, count, paint)
+    }
+
+    override fun drawLines(pts: FloatArray, paint: Paint) {
+        drawLines(pts, 0, pts.size, paint)
+    }
+
+    override fun drawOval(left: Float, top: Float, right: Float, bottom: Float,
+                          paint: Paint) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            canvas.drawOval(left, top, right, bottom, paint)
+        }
+    }
+
+    override fun drawOval(oval: RectF, paint: Paint) {
+        canvas.drawOval(oval, paint)
+    }
+
+    override fun drawPaint(paint: Paint) {
+        canvas.drawPaint(paint)
+    }
+
+    override fun drawPath(path: Path, paint: Paint) {
+        canvas.drawPath(path, paint)
+    }
+
+    override fun drawPicture(picture: Picture) {
+        canvas.drawPicture(picture)
+    }
+
+    override fun drawPicture(picture: Picture, dst: Rect) {
+        canvas.drawPicture(picture, dst)
+    }
+
+    override fun drawPicture(picture: Picture, dst: RectF) {
+        canvas.drawPicture(picture, dst)
+    }
+
+    override fun drawPoint(x: Float, y: Float, paint: Paint) {
+        canvas.drawPoint(x, y, paint)
+    }
+
+    override fun drawPoints(pts: FloatArray, offset: Int, count: Int,
+                            paint: Paint) {
+        canvas.drawPoints(pts, offset, count, paint)
+    }
+
+    override fun drawPoints(pts: FloatArray, paint: Paint) {
+        canvas.drawPoints(pts, 0, pts.size, paint)
+    }
+
+    override fun drawPosText(text: CharArray, index: Int, count: Int,
+                             pos: FloatArray,
+                             paint: Paint) {
+        canvas.drawPosText(text, index, count, pos, paint)
+    }
+
+    override fun drawPosText(text: String, pos: FloatArray,
+                             paint: Paint) {
+        canvas.drawPosText(text.toCharArray(), 0, text.length, pos, paint)
+    }
+
+    override fun drawRect(left: Float, top: Float, right: Float, bottom: Float,
+                          paint: Paint) {
+        canvas.drawRect(left, top, right, bottom, paint)
+    }
+
+    override fun drawRect(r: Rect, paint: Paint) {
+        drawRect(r.left.toFloat(), r.top.toFloat(), r.right.toFloat(), r.bottom.toFloat(), paint)
+    }
+
+    override fun drawRect(rect: RectF, paint: Paint) {
+        canvas.drawRect(rect, paint)
+    }
+
+    override fun drawRGB(r: Int, g: Int, b: Int) {
+        canvas.drawColor(Color.rgb(r, g, b))
+    }
+
+    override fun drawRoundRect(left: Float, top: Float, right: Float, bottom: Float,
+                               rx: Float, ry: Float, paint: Paint) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            canvas.drawRoundRect(left, top, right, bottom, rx, ry, paint)
+        }
+    }
+
+    override fun drawRoundRect(rect: RectF, rx: Float, ry: Float, paint: Paint) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            canvas.drawRoundRect(rect.left, rect.top, rect.right, rect.bottom, rx, ry, paint)
+        }
+    }
+
+    override fun drawTextOnPath(text: CharArray, index: Int, count: Int, path: Path,
+                                hOffset: Float, vOffset: Float, paint: Paint) {
+        canvas.drawTextOnPath(text, index, count, path, hOffset, vOffset, paint)
+    }
+
+    override fun drawTextOnPath(text: String, path: Path, hOffset: Float,
+                                vOffset: Float, paint: Paint) {
+        canvas.drawTextOnPath(text, path, hOffset, vOffset, paint)
+    }
+
+    override fun drawTextRun(text: CharArray, index: Int, count: Int, contextIndex: Int,
+                             contextCount: Int, x: Float, y: Float, isRtl: Boolean, paint: Paint) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            canvas.drawTextRun(text, index, count, contextIndex, contextCount, x, y, isRtl, paint)
+        }
+    }
+
+    override fun drawTextRun(text: CharSequence, start: Int, end: Int, contextStart: Int,
+                             contextEnd: Int, x: Float, y: Float, isRtl: Boolean, paint: Paint) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            canvas.drawTextRun(text, start, end, contextStart, contextEnd, x, y, isRtl, paint)
+        }
+    }
+
+    override fun drawVertices(mode: Canvas.VertexMode, vertexCount: Int,
+                              verts: FloatArray, vertOffset: Int, texs: FloatArray?, texOffset: Int,
+                              colors: IntArray?, colorOffset: Int, indices: ShortArray?, indexOffset: Int,
+                              indexCount: Int, paint: Paint) {
+        canvas.drawVertices(mode, vertexCount, verts, vertOffset, texs, texOffset, colors, colorOffset, indices, indexOffset, indexCount, paint)
+    }
+
+    override fun save(): Int {
+        return canvas.save()
+    }
+
+    override fun restore() {
+        canvas.restore()
+    }
+
+    override fun clipRect(rect: RectF): Boolean {
+        return canvas.clipRect(rect)
+    }
+
+    override fun clipRect(rect: Rect): Boolean {
+        return canvas.clipRect(rect)
+    }
+
+    override fun clipRect(left: Int, top: Int, right: Int, bottom: Int): Boolean {
+        return canvas.clipRect(left, top, right, bottom)
+    }
+
+    override fun clipRect(left: Float, top: Float, right: Float, bottom: Float): Boolean {
+        return canvas.clipRect(left, top, right, bottom)
+    }
+
+    override fun clipRect(rect: Rect, op: Region.Op): Boolean {
+        return canvas.clipRect(rect, op)
+    }
+
+    override fun clipRect(rect: RectF, op: Region.Op): Boolean {
+        return canvas.clipRect(rect, op)
+    }
+
+    override fun clipRect(left: Float, top: Float, right: Float, bottom: Float, op: Region.Op): Boolean {
+        return canvas.clipRect(left, top, right, bottom, op)
+    }
+
+    override fun translate(dx: Float, dy: Float) {
+        canvas.translate(dx, dy)
+    }
+
+    override fun getClipBounds(bounds: Rect?): Boolean {
+        return canvas.getClipBounds(bounds)
+    }
+
+    override fun getDrawFilter(): DrawFilter? {
+        return canvas.drawFilter
+    }
+
+    override fun setDrawFilter(filter: DrawFilter?) {
+        canvas.drawFilter = filter
+    }
+
+    companion object {
+        private val specialSet = hashSetOf('[', ']', '【', '】', '〔', '〕', '「', '」', '｢', '｢', '・',
+                '『', '』', '〖', '〗', '“', '”', '"', '〘', '〙', '｟', '｠', '〈', '〉', '《' ,'》', '：',
+                ':', ';', '；', '{', '}', '(', ')', '、', '。', ',', '，', '.')
+    }
+}
+
+
+//use
+private val proxy = CustomCanvas(Canvas())
+override fun onDraw(canvas: Canvas?) {
+    if (canvas == null) {
+        super.onDraw(canvas)
+    } else {
+        proxy.canvas = canvas
+        proxy.paint = paint
+        super.onDraw(proxy)
+    }
+}
