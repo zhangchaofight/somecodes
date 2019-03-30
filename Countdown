@@ -1,0 +1,171 @@
+import android.content.Context
+import android.graphics.*
+import android.util.AttributeSet
+import android.util.Log
+import android.view.View
+
+class CountDownView
+@JvmOverloads
+constructor(context: Context, attrs: AttributeSet? = null,
+            defStyleAttr: Int = 0)
+    : View(context, attrs, defStyleAttr) {
+
+    private val mPaint = Paint()
+    private val mEntirePath = Path()
+    private val mDrawPath = Path()
+    private val mPathMeasure = PathMeasure()
+    private var mDrawLength = 0F
+    private var mUpdateRunnable = Runnable {}
+    private var mLength = -1F
+
+    private val bgRectF = RectF()
+
+    private var mText = "跳过" //要显示的文字
+    private var mTextColor = Color.YELLOW
+    private var mTextSize = 100F
+    private var mBaseLine = 0F
+
+    private var mBgColor = Color.parseColor("#4d000000")
+    private var mLineColor = Color.parseColor("#ffff15")
+
+    init {
+        mPaint.isAntiAlias = true
+        mPaint.strokeCap = Paint.Cap.ROUND
+        mPaint.strokeWidth = 60F
+
+        setLayerType(LAYER_TYPE_SOFTWARE, null)
+    }
+
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        super.onLayout(changed, left, top, right, bottom)
+        cancelCountDown()
+        updatePath()
+        updateText()
+    }
+
+    private fun updatePath() {
+        mEntirePath.reset()
+        val stroke = mPaint.strokeWidth
+        val check = Math.min(width, height) / 2 < stroke
+        if (check) {
+            Log.e(TAG, "stroke width is too big,can't draw!")
+            mLength = -1F
+            return
+        }
+        val rectF = RectF()
+        val delta = stroke / 2
+        when {
+            width == height -> {
+                rectF.set(delta, delta, width - delta, height - delta)
+                mEntirePath.addOval(rectF, Path.Direction.CW)
+            }
+            width > height -> {
+                val x0 = height.toFloat() / 2
+                val x1 = width.toFloat() - height / 2
+                val y1 = height - delta
+                mEntirePath.moveTo(x0, delta)
+                mEntirePath.lineTo(x1, delta)
+                rectF.set(width.toFloat() - height + delta, delta, width - delta, y1)
+                mEntirePath.arcTo(rectF, 270F, 180F, false)
+                mEntirePath.lineTo(x0, y1)
+                rectF.set(delta, delta, y1, y1)
+                mEntirePath.arcTo(rectF, 90F, 180F, false)
+            }
+            else -> {
+                val x1 = width - delta
+                val y0 = width.toFloat() / 2
+                val y1 = height.toFloat() - width / 2
+                mEntirePath.moveTo(x1, y0)
+                mEntirePath.lineTo(x1, y1)
+                rectF.set(delta, height.toFloat() - width - delta, x1, height - delta)
+                mEntirePath.arcTo(rectF, 0f, 180f, false)
+                mEntirePath.lineTo(delta, y0)
+                rectF.set(delta, delta, x1, x1)
+            }
+        }
+        mEntirePath.close()
+        mPathMeasure.setPath(mEntirePath, true)
+        mLength = mPathMeasure.length
+        Log.e(TAG, "Total length is $mLength")
+
+        bgRectF.set(stroke, stroke, width - stroke, height - stroke)
+    }
+
+    private fun updateText() {
+        mPaint.textSize = mTextSize
+        mPaint.isFakeBoldText = true
+        mPaint.textAlign = Paint.Align.CENTER
+        val fm = mPaint.fontMetricsInt
+        mBaseLine = (height / 2 + (fm.bottom - fm.top) / 2 - fm.bottom).toFloat()
+    }
+
+    @Synchronized
+    fun startCountDown(duration: Long = DURATION) {
+        if (duration <= 0) {
+            Log.e(TAG, "start countdown is impossible!Duration is invalid!")
+            return
+        }
+        removeCallbacks(mUpdateRunnable)
+        if (mLength <= 0) {
+            Log.e(TAG, "start countdown is impossible!Path'length is invalid!")
+            return
+        }
+        val p = UPDATE_INTERVAL.toFloat() / duration * mLength
+        mDrawLength = 0F
+        mUpdateRunnable = Runnable {
+            if (mDrawLength >= mLength) {
+                return@Runnable
+            }
+            postDelayed(mUpdateRunnable, UPDATE_INTERVAL)
+            mDrawLength += p
+            postInvalidate()
+        }
+        post(mUpdateRunnable)
+    }
+
+    @Synchronized
+    fun cancelCountDown() {
+        removeCallbacks(mUpdateRunnable)
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        cancelCountDown()
+    }
+
+    private fun drawPath(canvas: Canvas) {
+        mPaint.style = Paint.Style.STROKE
+        mPaint.color = mLineColor
+        mDrawPath.reset()
+        mPathMeasure.getSegment(0F, mDrawLength, mDrawPath, true)
+        canvas.drawPath(mDrawPath, mPaint)
+    }
+
+    private fun drawBackground(canvas: Canvas) {
+        mPaint.color = mBgColor
+        mPaint.style = Paint.Style.FILL
+        bgRectF.set(mPaint.strokeWidth, mPaint.strokeWidth, width - mPaint.strokeWidth, height - mPaint.strokeWidth)
+        canvas.drawRoundRect(bgRectF, height / 2 - mPaint.strokeWidth, height / 2 - mPaint.strokeWidth, mPaint)
+    }
+
+    private fun drawText(canvas: Canvas) {
+        mPaint.color = mTextColor
+        mPaint.style = Paint.Style.FILL
+        canvas.drawText(mText, 0, mText.length, width.toFloat() / 2, mBaseLine, mPaint)
+    }
+
+    override fun onDraw(canvas: Canvas?) {
+        super.onDraw(canvas)
+        canvas?.run {
+            drawPath(this)
+            drawBackground(this)
+            drawText(this)
+        }
+    }
+
+    companion object {
+        private const val TAG = "CountDownView"
+        private const val DURATION = 3000L
+        private const val UPDATE_INTERVAL = 20L
+    }
+}
