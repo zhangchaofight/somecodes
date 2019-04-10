@@ -1,0 +1,57 @@
+import io.reactivex.Completable
+import io.reactivex.Single
+import io.reactivex.disposables.CompositeDisposable
+import io.reactivex.schedulers.Schedulers
+
+class HelloWorld {
+
+    companion object {
+
+        @JvmStatic
+        fun main(args: Array<String>) {
+            val list = arrayListOf(Entity("aaa", 1), Entity("bbb", 2), Entity("ccc", 3))
+
+            list.filter { it.id % 2 != 0 }
+                .map { it.name }
+                .forEach {
+                    System.out.println("name: $it")
+                }
+
+            val newList = list.filter { it.id < 100 }
+                .ifEmpty {
+                    System.out.println("list is empty")
+                    emptyList()
+                }
+                .map { it.name }
+
+            val compositeDisposable = CompositeDisposable()
+            System.out.println("main thread id: " + Thread.currentThread().id)
+            val completable = Completable.create {
+                System.out.println("completable work: " + Thread.currentThread().id)
+                Thread.sleep(2000)
+                it.onComplete()
+            }.subscribeOn(Schedulers.newThread())
+
+            val single = Single.create<String> {
+                System.out.println("single work: " + Thread.currentThread().id)
+                it.onSuccess("lalala")
+            }.observeOn(Schedulers.single())
+
+            val run = completable.andThen(single)
+                .subscribe(
+                    {
+                        System.out.println("run work: " + Thread.currentThread().id)
+                        System.out.println("run result: $it")
+                    }, {
+                        System.out.println("result error")
+                    }
+                )
+            compositeDisposable.add(run)
+
+            Thread.sleep(5000)
+            System.out.println("main thread exit")
+        }
+    }
+}
+
+data class Entity(val name: String, val id: Int)
