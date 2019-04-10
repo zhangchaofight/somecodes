@@ -1,57 +1,175 @@
-import io.reactivex.Completable
-import io.reactivex.Single
-import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.schedulers.Schedulers
-
-class HelloWorld {
-
     companion object {
 
         @JvmStatic
         fun main(args: Array<String>) {
-            val list = arrayListOf(Entity("aaa", 1), Entity("bbb", 2), Entity("ccc", 3))
+//            val compositeDisposable = CompositeDisposable()
+//            System.out.println("main thread id: " + Thread.currentThread().id)
+//            val completable = Completable.create {
+//                System.out.println("completable work: " + Thread.currentThread().id)
+//                Thread.sleep(2000)
+//                it.onComplete()
+//            }.subscribeOn(Schedulers.newThread())
+//
+//            val single = Single.create<String> {
+//                System.out.println("single work: " + Thread.currentThread().id)
+//                it.onSuccess("lalala")
+//            }.observeOn(Schedulers.single())
+//
+//            val run = completable.andThen(single)
+//                .subscribe(
+//                    {
+//                        System.out.println("run work: " + Thread.currentThread().id)
+//                        System.out.println("run result: $it")
+//                    }, {
+//                        System.out.println("result error")
+//                    }
+//                )
+//            compositeDisposable.add(run)
+//
+//            Thread.sleep(5000)
+//            System.out.println("main thread exit")
 
-            list.filter { it.id % 2 != 0 }
-                .map { it.name }
-                .forEach {
-                    System.out.println("name: $it")
+//            concatObservable()
+//            testJust()
+//            testMerge()
+//            play()
+//            retryWhen()
+        }
+
+        @SuppressLint("CheckResult")
+        private fun concatObservable() {
+            System.out.println()
+            System.out.println("concatObservable")
+            val firstEnable = false
+            val secondEnable = false
+
+            val first = Observable.create<String> {
+                if (firstEnable) {
+                    it.onNext("first")
+                } else {
+                    it.onComplete()
                 }
+            }
 
-            val newList = list.filter { it.id < 100 }
-                .ifEmpty {
-                    System.out.println("list is empty")
-                    emptyList()
+            val second = Observable.create<String> {
+                if (secondEnable) {
+                    it.onNext("second")
+                } else {
+                    it.onComplete()
                 }
-                .map { it.name }
+            }
 
-            val compositeDisposable = CompositeDisposable()
-            System.out.println("main thread id: " + Thread.currentThread().id)
-            val completable = Completable.create {
-                System.out.println("completable work: " + Thread.currentThread().id)
-                Thread.sleep(2000)
-                it.onComplete()
-            }.subscribeOn(Schedulers.newThread())
+            val third = Observable.just("third")
 
-            val single = Single.create<String> {
-                System.out.println("single work: " + Thread.currentThread().id)
-                it.onSuccess("lalala")
-            }.observeOn(Schedulers.single())
+            Observable.concat<String>(first, second, third).subscribe { System.out.println(it) }
+        }
 
-            val run = completable.andThen(single)
-                .subscribe(
-                    {
-                        System.out.println("run work: " + Thread.currentThread().id)
-                        System.out.println("run result: $it")
-                    }, {
-                        System.out.println("result error")
+        private fun testJust() {
+            System.out.println()
+            System.out.println("test just")
+            val o = Observable.just("aaa")
+                .doOnSubscribe {
+                    System.out.println("just work: " + Thread.currentThread().id)
+                }
+                .subscribeOn(Schedulers.newThread())
+                .observeOn(Schedulers.io())
+                .subscribe {
+                    System.out.println("just return $it : " + Thread.currentThread().id)
+                }
+        }
+
+        @SuppressLint("CheckResult")
+        private fun testMerge() {
+            System.out.println("test merge")
+            val net = Observable.just("net").delay(2L, TimeUnit.SECONDS)
+            val local = Observable.just("local").delay(4L, TimeUnit.SECONDS)
+            Observable.merge(net, local)
+                .buffer(2)
+                .map {
+                    var temp = ""
+                    it.forEach { s ->
+                        temp += "$s-"
                     }
-                )
-            compositeDisposable.add(run)
+                    temp
+                }
+                .subscribe {
+                    System.out.println("$it")
+                }
+            Thread.sleep(5000L)
+        }
 
-            Thread.sleep(5000)
-            System.out.println("main thread exit")
+        @SuppressLint("CheckResult")
+        private fun play() {
+            System.out.println()
+            System.out.println("test merge")
+            val first = Observable.create<Int> {
+                it.onNext(100)
+                it.onComplete()
+            }
+
+            val second = Observable.create<String> {
+                it.onNext("I'm playing!!!")
+                it.onComplete()
+            }
+
+            val third = Observable.create<String> {
+                it.onNext("finish")
+                it.onComplete()
+            }
+
+            val merge = Observable.merge(first, second).buffer(2).map {
+                val i = it.filter { item -> item is Int }
+                val s = it.filter { item -> item is String }
+                val num = i.firstOrNull() as? Int
+                val msg = s.firstOrNull() as? String
+                val mapped = msg + num.toString()
+                System.out.println("merged: $mapped")
+                mapped
+            }
+            Observable.concat(merge, third).buffer(2).map {
+                var temp = ""
+                it.forEach { s ->
+                    temp = temp.plus(s)
+                }
+                temp
+            }.subscribe {
+                System.out.println("concat: $it")
+            }
+        }
+
+
+        private fun retryWhen() {
+            val e = Observable.create<String> {
+                System.out.println("working~~~")
+                it.onError(HandleException())
+                it.onComplete()
+            }.retryWhen {
+                it.zipWith(Observable.range(0, 5), BiFunction<Throwable, Int, Int> { _, i -> i })
+                    .flatMap { index ->
+                        if (index == 4) {
+                            System.out.println("retry finish")
+                            Observable.error(Exception())
+                        } else {
+                            val delay = Math.pow(2.toDouble(), index.toDouble())
+                            System.out.println("retry delay:$delay")
+                            Observable.timer(delay.toLong(), TimeUnit.SECONDS)
+                        }
+                    }
+            }.subscribe(
+                {
+                    System.out.println("result: $it")
+                }, {
+                    System.out.println("error")
+                }, {
+                    System.out.println("finish")
+                }
+            )
+
+            Thread.sleep(20000)
         }
     }
 }
 
 data class Entity(val name: String, val id: Int)
+
+class HandleException : Exception()
