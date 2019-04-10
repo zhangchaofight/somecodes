@@ -9,29 +9,35 @@
  * timeoutTime:设置超时时长(默认3)
  * timeoutUnit:设置超时时长单位(默认TimeUnit.SECONDS)
  */
-fun timeoutModel(task: () -> Unit, success: () -> Unit, timeout: () -> Unit, error: () -> Unit,
-                 timeoutTime: Long = 3, timeoutUnit: TimeUnit = TimeUnit.SECONDS): Disposable {
+fun timeoutModel(
+    task: () -> Unit,
+    success: () -> Unit,
+    timeout: () -> Unit,
+    error: () -> Unit,
+    timeoutTime: Long = 3,
+    timeoutUnit: TimeUnit = TimeUnit.SECONDS
+): Disposable {
     return Observable.create<Unit> {
         try {
             task.invoke()
+            it.onNext(Unit)
         } catch (e: Exception) {
             it.onError(e)
         }
-        it.onNext(Unit)
         it.onComplete()
     }.timeout(timeoutTime, timeoutUnit)
-            .subscribeBy(
-                    onNext = {
-                        success.invoke()
-                    },
-                    onError = {
-                        if (it is TimeoutException) {
-                            timeout.invoke()
-                        } else {
-                            error.invoke()
-                        }
-                    }
-            )
+        .subscribeBy(
+            onNext = {
+                success.invoke()
+            },
+            onError = {
+                if (it is TimeoutException) {
+                    timeout.invoke()
+                } else {
+                    error.invoke()
+                }
+            }
+        )
 }
 ```
 备注：
