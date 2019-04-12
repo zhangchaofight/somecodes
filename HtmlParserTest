@@ -1,0 +1,106 @@
+import android.annotation.SuppressLint
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Element
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.Base64.getUrlEncoder
+
+/**
+ * 用到的第三方库,用于html的解析
+ * // https://mvnrepository.com/artifact/org.jsoup/jsoup
+ * implementation group: 'org.jsoup', name: 'jsoup', version: '1.11.3'
+ */
+
+//这个是下载后图片的存储地址
+const val SAVE_PATH = "/"
+
+class HtmlParserTest {
+
+    companion object {
+
+        @Suppress("UnusedMainParameter")
+        @JvmStatic fun main(args: Array<String>) {
+            //替换任意 百——家——号 文章
+            getHtml("https://mbd.baidu.com/newspage/data/landingsuper?context=%7B%22nid%22%3A%22news_9499402485286290816%22%7D&n_type=0&p_from=1")
+        }
+
+        private fun getHtml(url: String) {
+            val doc = Jsoup.connect(url).get()
+            val title = doc.getElementsByTag("title").first()
+            val content = doc.getElementsByClass("article-content").firstOrNull()
+            if (content != null) {
+                parseImgUrls(content)
+                val finalHtml = assembleHtml(title.toString(), content.toString())
+                val t = title.childNode(0).toString()
+                saveHtml(t, finalHtml)
+                System.out.println(finalHtml)
+            }
+        }
+
+        private fun assembleHtml(title: String, content: String): String {
+            return "<!DOCTYPE html>\n" +
+                    "<html>\n" +
+                    "    <head>\n" +
+                    "        $title\n" +
+                    "        <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />\n" +
+                    "    </head>\n" +
+                    "    <body>\n" +
+                    "        $content" +
+                    "    </body>\n" +
+                    "</html>"
+        }
+
+        private fun parseImgUrls(content: Element) {
+            val imgContainers = content.getElementsByClass("img-container")
+            imgContainers?.forEach {
+                it.getElementsByAttribute("src").forEach { img ->
+                    val temp = img.attributes()["src"]
+                    temp.downloadImage()
+                    img.attributes().put("src", "${encodeUrl(temp)}.jpg")
+                }
+            }
+        }
+    }
+}
+
+fun String?.downloadImage() {
+    this?.apply {
+        downLoadImage(this)
+    }
+}
+
+fun downLoadImage(url: String) {
+    val u = URL(url)
+    val conn=  u.openConnection() as HttpURLConnection
+    conn.requestMethod = "GET"
+    conn.connectTimeout = 2000 // 超时提示1秒=1000毫秒
+    val inStream= conn.inputStream //获取输出流
+    val data = readInputStream(inStream)
+
+    val file= File("$SAVE_PATH${encodeUrl(url)}.jpg")
+    val outStream = FileOutputStream(file)
+    outStream.write(data)
+}
+
+fun readInputStream(inStream: InputStream): ByteArray {
+    val outStream = ByteArrayOutputStream()
+    val buffer = ByteArray(1024)//转换为二进制
+    var len = 0
+    while(len!= -1){
+        outStream.write(buffer,0,len)
+        len = inStream.read(buffer)
+    }
+    return outStream.toByteArray()
+}
+
+@SuppressLint("NewApi")
+fun encodeUrl(url: String) = getUrlEncoder().encodeToString(url.toByteArray())!!
+
+fun saveHtml(title: String, html: String) {
+    val file = File("$SAVE_PATH$title.html")
+    file.writeText(html)
+}
