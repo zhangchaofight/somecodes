@@ -1,0 +1,51 @@
+import io.reactivex.Observable
+import io.reactivex.functions.BiFunction
+import io.reactivex.schedulers.Schedulers
+import java.util.concurrent.TimeUnit
+
+fun <T> Observable<T>.scRetryWhen(
+    retryIf: (Throwable) -> Boolean,
+    retryCount: Int = 4,
+    retryInterval: (Int) -> Long = { index -> Math.pow(2.toDouble(), index.toDouble()).toLong() }
+): Observable<T> {
+    return this.retryWhen {
+        it.zipWith(Observable.range(0, retryCount + 1), BiFunction<Throwable, Int, Pair<Throwable, Int>> { t1, t2 ->
+            if (retryIf(t1)) {
+                Pair(t1, t2)
+            } else {
+                Pair(t1, -1)
+            }
+        }).flatMap { pair ->
+            when (pair.second) {
+                -1 -> Observable.error(Exception("scRetryWhen did not retry: ${pair.first.message}", pair.first.cause))
+                retryCount -> Observable.error(Exception("scRetryWhen retry for $retryCount times: ${pair.first.message}", pair.first.cause))
+                else -> {
+                    val delay = retryInterval(pair.second)
+                    Observable.timer(delay, TimeUnit.SECONDS)
+                }
+            }
+        }
+    }
+}
+
+//test
+class HandleException : Exception()
+
+private fun scRetry() {
+    val e = Observable.create<String> {
+        System.out.println("working~~~")
+        it.onError(HandleException())
+        it.onComplete()
+    }.scRetryWhen({ t -> t is HandleException })
+//    }.scRetryWhen({ t -> t !is HandleException })
+        .subscribe(
+            {
+                System.out.println("result: $it")
+            }, {
+                System.out.println("scRetryWhen :${it.message}")
+            }, {
+                System.out.println("finish")
+            }
+        )
+    Thread.sleep(20000)
+}
