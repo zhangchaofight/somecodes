@@ -1,0 +1,297 @@
+import android.graphics.Color
+import android.os.Bundle
+import android.support.v4.app.Fragment
+import android.support.v4.app.FragmentManager
+import android.support.v4.app.FragmentPagerAdapter
+import android.support.v4.app.FragmentTransaction
+import android.support.v7.app.AppCompatActivity
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import kotlinx.android.synthetic.main.fragment_child.view.*
+import kotlinx.android.synthetic.main.fragment_view_pager.view.*
+import org.jetbrains.anko.backgroundColor
+import java.lang.Exception
+
+/**
+ * 分为两个页面，[MainFragment]和[ViewPagerFragment]，其中[ViewPagerFragment]
+ * 里面包含有Fragment ViewPager[ChildFragmentAdapter]
+ * 这个测试可以解决相关的曝光需求
+ * 需要注意以下情况:
+ * 情况1：[android.support.v4.app.FragmentTransaction.show],[android.support.v4.app.FragmentTransaction.hide]
+ * 导致的可见性变化，这种情况下使用[android.support.v4.app.Fragment.onHiddenChanged]监听
+ * 情况2：ViewPager切换导致的可见性变化，这种情况下使用[android.support.v4.app.Fragment.setUserVisibleHint]监听
+ * 情况3：首次创建不会触发前两种方法的监听，因此需要在调用的时候手动调用，
+ * 需要先写一个类似[MainFragment.manualVisible]的方法
+ * 这种情况分为具体两种场景:
+ * (1)如果是第一个界面可以再add的时候，写一个手动触发的方法,在 [android.support.v4.app.FragmentTransaction.add]方法之后直接调用此方法
+ * (2)如果是第二个界面可以在[android.support.v4.app.Fragment.onViewCreated]的方法末尾调用此方法
+ */
+fun testFragmentViewPager(container: Int, main: View, sub: View, activity: AppCompatActivity) {
+    val mainFrg = MainFragment()
+    val subFrg = ViewPagerFragment()
+    activity.supportFragmentManager.transactAllowingStateLoss {
+        add(container, mainFrg, "main")
+        //当在onCreate()里创建的时候使用此方法，其余在onViewCreate()里调用即可
+//                mainFrg.manualVisible(true)
+    }
+    main.setOnClickListener {
+        activity.supportFragmentManager.transactAllowingStateLoss {
+            val f0 = activity.supportFragmentManager.findFragmentByTag("main")
+            if (f0 != null) {
+                show(f0)
+            } else {
+                show(mainFrg)
+            }
+
+            val f1 = activity.supportFragmentManager.findFragmentByTag("sub")
+            if (f1!= null) {
+                hide(f1)
+            }
+        }
+    }
+    sub.setOnClickListener {
+        activity.supportFragmentManager.transactAllowingStateLoss {
+            val f0 = activity.supportFragmentManager.findFragmentByTag("sub")
+            if (f0 != null) {
+                show(f0)
+            } else {
+                add(container, subFrg, "sub")
+            }
+
+            val f1 = activity.supportFragmentManager.findFragmentByTag("main")
+            if (f1!= null) {
+                hide(f1)
+            }
+        }
+    }
+}
+
+inline fun FragmentManager.transactAllowingStateLoss(action: FragmentTransaction.() -> Unit) {
+    beginTransaction().apply {
+        action()
+    }.commitAllowingStateLoss()
+}
+
+class ViewPagerFragment : BaseFragment() {
+
+    private var adapter: ChildFragmentAdapter? = null
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        return inflater.inflate(R.layout.fragment_view_pager, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        val ctx = view.context
+        val fm = if (ctx is AppCompatActivity) {
+            ctx.supportFragmentManager
+        } else {
+            null
+        }
+        fm ?: return
+        with(view) {
+            adapter = ChildFragmentAdapter(fm)
+            view_pager.adapter = adapter
+        }
+        manualVisible(true)
+    }
+
+    override fun onVisibleChange(visible: Boolean) {
+        super.onVisibleChange(visible)
+        Log.d("ViewPagerFragment", "onVisibleChange:$visible")
+        view?.apply {
+            with(this) {
+                val index = this.view_pager.currentItem
+                adapter?.notifyChildVisibleChange(index, visible)
+            }
+        }
+    }
+
+    /**
+     * 副页面，因此要在他第一次在创建后手动调用一次
+     */
+    fun manualVisible(visible: Boolean) {
+        Log.d("ViewPagerFragment", "onVisibleChange:$visible")
+        view?.apply {
+            with(this) {
+                val index = this.view_pager.currentItem
+                adapter?.notifyChildVisibleChange(index, visible)
+            }
+        }
+    }
+}
+
+class ChildFragment : BaseFragment() {
+
+    private var frgId = 0
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        return inflater.inflate(R.layout.fragment_child, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        arguments?.apply {
+            view.backgroundColor = try {
+                Color.parseColor(this.getString("color"))
+            } catch (e: Exception) {
+                Color.BLUE
+            }
+            frgId = this.getInt("frgId", 0)
+            with(view) {
+                content.text = try {
+                    this@apply.getString("content")
+                } catch (e: Exception) {
+                    "child fragment"
+                }
+            }
+        }
+    }
+
+    override fun onVisibleChange(visible: Boolean) {
+        super.onVisibleChange(visible)
+        Log.d("ChildFragment", "onVisibleChange$frgId:$visible")
+    }
+}
+
+class MainFragment : BaseFragment() {
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        return inflater.inflate(R.layout.fragment_main, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        manualVisible(true)
+    }
+
+    override fun onVisibleChange(visible: Boolean) {
+        super.onVisibleChange(visible)
+        Log.d("MainFragment", "onVisibleChange:$visible")
+    }
+
+    fun manualVisible(visible: Boolean) {
+        Log.d("MainFragment", "onVisibleChange:$visible")
+    }
+}
+
+open class BaseFragment : Fragment() {
+
+    private var _visible = false
+
+    @Suppress("SuspiciousVarProperty")
+    var visible: Boolean = _visible
+        get() = _visible
+
+    open fun onVisibleChange(visible: Boolean) {}
+
+    fun parentVisibleChange(visible: Boolean) {
+        _visible = visible
+        onVisibleChange(_visible)
+    }
+
+    override fun setUserVisibleHint(isVisibleToUser: Boolean) {
+        super.setUserVisibleHint(isVisibleToUser)
+        _visible = isVisibleToUser
+        if (isAdded) {
+            onVisibleChange(_visible)
+        }
+    }
+
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        _visible = !hidden
+        onVisibleChange(_visible)
+    }
+}
+
+class ChildFragmentAdapter(fm: FragmentManager) : FragmentPagerAdapter(fm) {
+
+    private val fragmentList = mutableListOf<Fragment>().apply {
+        add(ChildFragment().apply {
+            arguments = Bundle().apply {
+                putString("color", "#00ff00")
+                putString("content", "child0")
+                putInt("frgId", 0)
+            }
+        })
+        add(ChildFragment().apply {
+            arguments = Bundle().apply {
+                putString("color", "#0000ff")
+                putString("content", "child1")
+                putInt("frgId", 1)
+            }
+        })
+    }
+
+    fun notifyChildVisibleChange(index: Int, parentVisible: Boolean) {
+        fragmentList.getOrNull(index)?.apply {
+            if (this is BaseFragment) {
+                parentVisibleChange(parentVisible)
+            }
+        }
+    }
+
+    override fun getItem(index: Int) = fragmentList[index]
+
+    override fun getCount() = fragmentList.size
+}
+/*
+    R.layout.fragment_view_pager
+
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <android.support.v4.view.ViewPager
+        android:id="@+id/view_pager"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+</FrameLayout>
+ */
+
+/*
+       R.layout.fragment_main
+
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#ff0000">
+
+    <TextView
+        android:id="@+id/content"
+        android:textColor="#000000"
+        android:layout_gravity="center"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:text="main fragment"/>
+</FrameLayout>
+ */
+
+/*
+        R.layout.fragment_child
+
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <TextView
+        android:id="@+id/content"
+        android:textColor="#000000"
+        android:layout_gravity="center"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        tools:text="aaa"/>
+</FrameLayout>
+ */
