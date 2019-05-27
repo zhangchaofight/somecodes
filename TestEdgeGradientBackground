@@ -1,0 +1,184 @@
+import android.graphics.*
+import android.graphics.drawable.Drawable
+import android.view.View
+import org.jetbrains.anko.dip
+
+/**
+ * 背景半透明效果实现，只需要使用[android.view.View.setBackground]方法配合[GradientBackground]即可实现
+ */
+fun testBackground(view: View) {
+    val drawable = GradientBackground().apply { padding = view.context.dip(40) }
+    view.background = drawable
+}
+
+//todo 实现背景的边缘的可控渐变
+class GradientBackground : Drawable() {
+
+    private val startColor = Color.parseColor("#ff000000")
+    private val endColor = Color.parseColor("#00000000")
+
+    private val paint = Paint()
+    private val rectF = RectF(0F, 0F, 0F, 0F)
+    var padding = 0
+        set(value) {
+            field = if (value < 0) 0 else value
+        }
+
+    init {
+        paint.isAntiAlias = true
+    }
+
+    override fun setBounds(bounds: Rect) {
+        super.setBounds(bounds)
+        bounds.apply {
+            rectF.set(this)
+        }
+    }
+
+    override fun setBounds(left: Int, top: Int, right: Int, bottom: Int) {
+        super.setBounds(left, top, right, bottom)
+        rectF.set(left.toFloat(), top.toFloat(), right.toFloat(), bottom.toFloat())
+    }
+
+    override fun draw(canvas: Canvas) {
+        val widthOverflow = padding * 2 >= (rectF.right - rectF.left)
+        val heightOverflow = padding * 2 >= (rectF.bottom - rectF.top)
+        when {
+            !widthOverflow && !heightOverflow -> {
+                draw0(canvas)
+            }
+            widthOverflow && !heightOverflow -> {
+                draw1(canvas)
+            }
+            !widthOverflow && !heightOverflow -> {
+                draw2(canvas)
+            }
+            widthOverflow && heightOverflow -> {
+                draw3(canvas)
+            }
+        }
+    }
+
+    private fun draw0(canvas: Canvas) {
+        val lt = RadialGradient(
+                padding.toFloat(),
+                padding.toFloat(),
+                padding.toFloat(),
+                startColor,
+                endColor,
+                Shader.TileMode.CLAMP
+        )
+        paint.shader = lt
+        canvas.drawRect(0f, 0f, padding.toFloat(), padding.toFloat(), paint)
+
+        val t = LinearGradient(
+                0f,
+                0f,
+                0f,
+                padding.toFloat(),
+                endColor,
+                startColor,
+                Shader.TileMode.CLAMP
+        )
+        paint.shader = t
+        canvas.drawRect(padding.toFloat(), 0f, rectF.right - padding, padding.toFloat(), paint)
+
+        val b = LinearGradient(
+                0f,
+                rectF.bottom - padding.toFloat(),
+                0f,
+                rectF.bottom,
+                startColor,
+                endColor,
+                Shader.TileMode.CLAMP
+        )
+        paint.shader = b
+        canvas.drawRect(padding.toFloat(), rectF.bottom - padding.toFloat(), rectF.right - padding, rectF.bottom, paint)
+
+        val lr = RadialGradient(
+                rectF.right - padding,
+                padding.toFloat(),
+                padding.toFloat(),
+                startColor,
+                endColor,
+                Shader.TileMode.CLAMP
+        )
+        paint.shader = lr
+        canvas.drawRect(rectF.right - padding, 0f, rectF.right, padding.toFloat(), paint)
+
+        val l = LinearGradient(
+                0f,
+                0f,
+                padding.toFloat(),
+                0f,
+                endColor,
+                startColor,
+                Shader.TileMode.CLAMP
+        )
+        paint.shader = l
+        canvas.drawRect(0f, padding.toFloat(), padding.toFloat(), rectF.bottom - padding, paint)
+
+        val r = LinearGradient(
+                rectF.right - padding,
+                0f,
+                rectF.right,
+                0f,
+                startColor,
+                endColor,
+                Shader.TileMode.CLAMP
+        )
+        paint.shader = r
+        canvas.drawRect(rectF.right - padding, padding.toFloat(), rectF.right, rectF.bottom - padding, paint)
+
+        val lb = RadialGradient(
+                padding.toFloat(),
+                rectF.bottom - padding.toFloat(),
+                padding.toFloat(),
+                startColor,
+                endColor,
+                Shader.TileMode.CLAMP
+        )
+        paint.shader = lb
+        canvas.drawRect(0f, rectF.bottom - padding, padding.toFloat(), rectF.bottom, paint)
+
+
+        val rb = RadialGradient(
+                rectF.right - padding.toFloat(),
+                rectF.bottom - padding.toFloat(),
+                padding.toFloat(),
+                startColor,
+                endColor,
+                Shader.TileMode.CLAMP
+        )
+        paint.shader = rb
+        canvas.drawRect(rectF.right - padding.toFloat(), rectF.bottom - padding, rectF.right, rectF.bottom, paint)
+
+        paint.color = startColor
+        paint.shader = null
+        canvas.drawRect(padding.toFloat(), padding.toFloat(), rectF.right - padding, rectF.bottom - padding, paint)
+    }
+
+    private fun draw1(canvas: Canvas) {
+
+    }
+
+    private fun draw2(canvas: Canvas) {
+
+    }
+
+    private fun draw3(canvas: Canvas) {
+
+    }
+
+    override fun setAlpha(alpha: Int) {
+        paint.alpha = alpha
+    }
+
+    override fun getOpacity(): Int {
+        return PixelFormat.TRANSLUCENT
+    }
+
+    override fun setColorFilter(colorFilter: ColorFilter?) {
+        paint.colorFilter = colorFilter
+    }
+}
