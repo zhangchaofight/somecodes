@@ -1,0 +1,4 @@
+val format = NumberFormat.getNumberInstance().apply {
+                maximumFractionDigits = 3
+            }
+format.format(maxProgress)
