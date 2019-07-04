@@ -1,0 +1,2 @@
+Instrumentation inst= new Instrumentation();
+inst.sendKeyDownUpSync(KeyEvent. KEYCODE_BACK);
