@@ -2,3 +2,6 @@ Manifest merger failed : uses-sdk:minSdkVersion 19 cannot be smaller than versio
 	Suggestion: use a compatible library with a minSdk of at most 19,
 		or increase this project's minSdk version to at least 21,
 		or use tools:overrideLibrary="com.yy.mobile.emoji" to force usage (may lead to runtime failures)
+		
+		
+第三种方案的做法是  在 AndroidManifest 中添加 <uses-sdk tools:overrideLibrary="xxx.xxx.aaa, xxx.xxx.bbb"/>
