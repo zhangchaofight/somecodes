@@ -1,0 +1,87 @@
+/**
+ * 使用范例
+ * class UsePoolClass{
+ *
+ *     fun obtain(): UsePoolClass {
+ *         return pool.acquire<UsePoolClass>() ?: UsePoolClass()
+ *     }
+ *
+ *     //有必要的话重置状态
+ *     fun recycle() {
+ *         pool.release(this)
+ *     }
+ *
+ *     companion object {
+ *         private val pool = Pools.SynchronizedPool<UsePoolClass>(10)
+ *     }
+ * }
+ * 
+ */
+object Pools{
+
+    interface Pool<T> {
+        fun <T> acquire(): T?
+        fun <T> release(instance: T): Boolean
+    }
+
+    open class SimplePool<T>(maxSize: Int) : Pool<T> {
+        private var size: Int = 0
+        private val instances: Array<Any?>
+
+        init {
+            if (maxSize <= 0) {
+                throw IllegalArgumentException("maxSize must greater than zero!")
+            }
+            instances = Array(size = maxSize) { null }
+        }
+
+        override fun <T> release(instance: T): Boolean {
+            if (isInPool(instance)) {
+                throw  IllegalStateException("Already in the pool")
+            }
+            if (size < instances.size) {
+                instances[size] = instance
+                size++
+                return true
+            }
+            return false
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        override fun <T> acquire(): T? {
+            for (i in (size - 1) downTo 0) {
+                if (instances[i] != null) {
+                    size = i + 1
+                    return instances.getOrNull(size) as? T
+                }
+            }
+            size = 0
+            return null
+        }
+
+        private fun <T> isInPool(instance: T): Boolean {
+            instances.forEach {
+                if (it == instance) {
+                    return true
+                }
+            }
+            return false
+        }
+    }
+
+    class SynchronizedPool<T>(maxSize: Int): SimplePool<T>(maxSize) {
+        private val lock = Object()
+
+        override fun <T> acquire(): T? {
+            synchronized(lock) {
+                return super.acquire()
+            }
+        }
+
+        override fun <T> release(instance: T): Boolean {
+            synchronized(lock) {
+                return super.release(instance)
+            }
+        }
+    }
+}
