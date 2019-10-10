@@ -1,0 +1,51 @@
+/**
+ * 自己控制分割线的大小和绘制内容
+ */
+class CustomFirstDividerDrawable: RecyclerView.ItemDecoration() {
+    private val mBounds = Rect()
+    private val paint = Paint().apply {
+        isAntiAlias = true
+    }
+
+    override fun onDraw(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
+        super.onDraw(c, parent, state)
+        for (index in 0 until parent.childCount) {
+            val pos = parent.getChildLayoutPosition(parent.getChildAt(index))
+            if (pos == 0) {
+                realDraw(parent, parent.getChildAt(index), c)
+                return
+            }
+        }
+    }
+
+    private fun realDraw(parent: RecyclerView, child: View, canvas: Canvas) {
+        parent.getDecoratedBoundsWithMargins(child, mBounds)
+        val bottom = mBounds.bottom + Math.round(child.translationY)
+        val top = mBounds.top + Math.round(child.translationY)
+        canvas.save()
+        canvas.clipRect(0, top, parent.width, bottom)
+
+        paint.color = Color.BLACK
+        paint.textSize = child.sp(14).toFloat()
+        paint.isFakeBoldText = true
+        canvas.drawText("曲を聴く", 20F, top.toFloat() + child.dip(30), paint)
+
+        paint.color = Color.DKGRAY
+        paint.textSize = child.sp(10).toFloat()
+        paint.isFakeBoldText = false
+        canvas.drawText("今日のリスナー数5/累積收聽人數1434", 20F, top.toFloat() + child.dip(45), paint)
+
+        canvas.restore()
+    }
+
+    override fun getItemOffsets(outRect: Rect, view: View, parent: RecyclerView, state: RecyclerView.State) {
+        outRect.top = if (parent.getChildLayoutPosition(view) == 0) {
+            view.dip(60)
+        } else {
+            view.dip(10)
+        }
+        outRect.left = 0
+        outRect.right = 0
+        outRect.bottom = 0
+    }
+}
