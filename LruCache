@@ -1,0 +1,155 @@
+/**
+ * cover:androidx.collection.LruCache
+ * 写的很不错的一个类，官方是Java版本，我用Kotlin翻写一遍
+ */
+ open class LruCache<K, V>(maxSize: Int) {
+    private var putCount = 0
+    private var createCount = 0
+    private var missCount = 0
+    private var hitCount = 0
+    private val hashMap = LinkedHashMap<K, V>(0, 0.75F, true)
+
+    private var size = 0
+    private var maxSize: Int
+    private var evictionCount = 0
+
+    init {
+        require(maxSize >= 0) { "maxSize can not be negative" }
+        this.maxSize = maxSize
+    }
+
+    fun resize(maxSize: Int) {
+        require(maxSize >= 0) { "maxSize can not be negative" }
+        synchronized(this) {
+            this.maxSize = maxSize
+        }
+        trimToSize(maxSize)
+    }
+
+
+    private fun trimToSize(maxSize: Int) {
+        while (true) {
+            var key: K? = null
+            var value: V? = null
+            synchronized(this) {
+                require(!(size < 0 || (hashMap.isEmpty() && size != 0))) {
+                    "${javaClass.simpleName}.sizeOf() is reporting inconsistent result "
+                }
+
+                if (size <= maxSize || hashMap.isEmpty()) {
+                    return@synchronized
+                }
+
+                val entry = hashMap.iterator().next()
+                key = entry.key
+                value = entry.value
+                hashMap.remove(key!!)
+
+                size -= safeSizeOf(key!!, value!!)
+                evictionCount++
+            }
+
+            entryRemoved(true, key!!, value!!, null)
+        }
+    }
+
+    private fun safeSizeOf(key: K, value: V): Int {
+        val result = sizeOf(key, value)
+        require(result > 0) { "" }
+        return result
+    }
+
+    open fun sizeOf(key: K, value: V): Int {
+        return 1
+    }
+
+    open fun entryRemoved(evicted: Boolean, key: K, value: V, newValue: V?) {}
+
+    fun evictAll() {
+        trimToSize(-1)
+    }
+
+    fun get(key: K): V? {
+        require(key != null) { "key must not be null" }
+        var mapValue: V? = null
+        synchronized(this) {
+            mapValue = hashMap[key]
+            val temp = mapValue
+            if (temp != null) {
+                ++hitCount
+                return mapValue
+            }
+            ++missCount
+        }
+
+        val createValue = create(key)
+        if (createValue == null) {
+            return null
+        } else {
+            synchronized(this) {
+                ++createCount
+                mapValue = hashMap.put(key, createValue)
+                val temp = mapValue
+                if (temp != null) {
+                    hashMap[key] = temp
+                } else {
+                    size += safeSizeOf(key, createValue)
+                }
+            }
+
+            val temp = mapValue
+            return if (temp != null) {
+                entryRemoved(false, key, createValue, temp)
+                temp
+            } else {
+                trimToSize(maxSize)
+                null
+            }
+        }
+    }
+
+    open fun create(key: K): V? {
+        return null
+    }
+
+    fun put(key: K, value: V): V? {
+        require(key != null && value != null) { "key must not be null" }
+        var mapValue: V? = null
+        synchronized(this) {
+            ++putCount
+            size += safeSizeOf(key, value)
+            mapValue = hashMap.put(key, value)
+            val temp = mapValue
+            if (temp != null) {
+                size -= safeSizeOf(key, temp)
+            }
+        }
+
+        val temp = mapValue
+        if (temp != null) {
+            entryRemoved(false, key, temp, value)
+        }
+
+        trimToSize(maxSize)
+        return temp
+    }
+
+    fun remove(key: K): V? {
+        require(key != null) { "key must not be null" }
+        var mapValue: V? = null
+        synchronized(this) {
+            mapValue = hashMap.remove(key)
+            val temp = mapValue
+            if (temp != null) {
+                size -= safeSizeOf(key, temp)
+            }
+        }
+
+        val temp = mapValue
+        if (temp != null) {
+            entryRemoved(false, key, temp, null)
+        }
+
+        return temp
+    }
+}
